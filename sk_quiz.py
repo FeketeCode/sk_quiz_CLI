@@ -174,12 +174,18 @@ def ask_questions(questions: list[tuple[str, str, str]]) -> Action:
     return Action.FORWARD
 
 
-def main():
-    patterns = load_patterns()
+def print_instructions() -> None:
+    """Prints quiz navigation instructions."""
 
     print("Enter 'q' at any time to quit.")
     print("Enter 'pc' to return to previous case.")
     print("Enter 'pn' to return to prevous noun.\n")
+
+
+def main():
+    patterns = load_patterns()
+
+    print_instructions()
     quiz_running = True
     curr_pos = 0
     while curr_pos < len(patterns):

@@ -1,7 +1,7 @@
-import pprint
 import json
 from typing import Any, TypedDict, cast
 from typing_extensions import ReadOnly
+from enum import Enum, auto
 
 
 class CaseForms(TypedDict):
@@ -27,6 +27,12 @@ CASE_NAMES = (
     'locative',
     'instrumental',
 )
+
+
+class Action(Enum):
+    BACK = auto()
+    STOP = auto()
+    FORWARD = auto()
 
 
 def validate_pattern(pattern: Any) -> Pattern:
@@ -112,8 +118,81 @@ def load_patterns(
     return patterns
 
 
+def create_question_triples(pattern: Pattern) -> list[tuple[str, str, str]]:
+    """Creates question triples from a pattern.
+
+    Args:
+        pattern: A compound dictionary containing the pattern used to
+            create question triples.
+
+    Returns:
+        A list of (noun, number, case) tuples, one for each case under
+        each number.
+    """
+    noun = pattern['singular']['nominative']
+    return [
+        (noun, number, case)
+        for number in NUMBER_KEYS
+        for case in pattern[number]
+    ]
+
+
+def ask_questions(questions: list[tuple[str, str, str]]) -> Action:
+    """Asks the user every question in the list, except for the 
+    nominative case.
+
+    Prints each question individually then prompts for a user input. 
+    The (first) nominative case is used to display the current noun.
+
+    Args:
+        questions: A list of (noun, number, case) tuples storing the 
+            questions.
+
+    Returns:
+        Action.STOP if the user quits, Action.BACK if the user requests 
+        the previous pattern, or Action.FORWARD if the user answers 
+        every question.
+    """
+
+    print(f"{questions[0][0].capitalize()}")
+    # Skip the nominative case
+    curr_pos = 1
+    while curr_pos < len(questions):
+        _, curr_number, curr_case = questions[curr_pos]
+        prompt = f"{curr_number} {curr_case}: "
+        user_input = input(prompt).strip().lower()
+
+        if user_input == 'q':
+            return Action.STOP
+        elif user_input == 'pn':
+            return Action.BACK
+        elif user_input == 'pc':
+            curr_pos = max(curr_pos-1, 1)
+        else:
+            curr_pos += 1
+                
+    return Action.FORWARD
+
+
 def main():
     patterns = load_patterns()
+
+    print("Enter 'q' at any time to quit.")
+    print("Enter 'pc' to return to previous case.")
+    print("Enter 'pn' to return to prevous noun.\n")
+    quiz_running = True
+    curr_pos = 0
+    while curr_pos < len(patterns):
+        curr_question = create_question_triples(patterns[curr_pos])
+
+        action = ask_questions(curr_question)
+
+        if action is Action.FORWARD:
+            curr_pos += 1
+        elif action is Action.BACK:
+            curr_pos = max(curr_pos-1, 0)
+        else:
+            break
 
 
 if __name__ == '__main__':

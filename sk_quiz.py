@@ -145,7 +145,7 @@ def ask_questions(
     nominative case, then saves their answers.
 
     Prints each question individually then prompts for a user input.
-    The (first) nominative case is used to display the current noun.
+    The singular nominative case is used to display the current noun.
     The inputs 'q', 'pn', 'pc' mean quit, return to the previous noun, 
     return to the previous case, respectively. Other inputs are saved 
     as answers.
@@ -159,8 +159,12 @@ def ask_questions(
         (answers may be incomplete if the user quits or navigates back).
     """
 
-    print(f"{questions[0][0].capitalize()}")
+    nominative_noun = questions[0][0]
+    print(f"{nominative_noun.capitalize()}")
+
     user_answers: UserAnswers = {key: {} for key in NUMBER_KEYS}
+    user_answers['singular']['nominative'] = nominative_noun
+
     # Skip the nominative case
     curr_pos = 1
     while curr_pos < len(questions):
@@ -193,11 +197,13 @@ def main():
     patterns = load_patterns()
 
     print_instructions()
+    user_test_answers = []
     curr_pos = 0
     while curr_pos < len(patterns):
-        curr_question = create_question_triples(patterns[curr_pos])
+        question = create_question_triples(patterns[curr_pos])
 
-        action, answers = ask_questions(curr_question)
+        action, answers = ask_questions(question)
+        user_test_answers.append(answers)
 
         if action is Action.FORWARD:
             curr_pos += 1

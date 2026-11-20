@@ -27,6 +27,7 @@ CASE_NAMES = (
     'locative',
     'instrumental',
 )
+type UserAnswers = dict[str, dict[str, str]]
 
 
 class Action(Enum):
@@ -137,41 +138,47 @@ def create_question_triples(pattern: Pattern) -> list[tuple[str, str, str]]:
     ]
 
 
-def ask_questions(questions: list[tuple[str, str, str]]) -> Action:
-    """Asks the user every question in the list, except for the 
-    nominative case.
+def ask_questions(
+    questions: list[tuple[str, str, str]],
+) -> tuple[Action, UserAnswers]:
+    """Asks the user every question in the list, except for the
+    nominative case, then saves their answers.
 
-    Prints each question individually then prompts for a user input. 
+    Prints each question individually then prompts for a user input.
     The (first) nominative case is used to display the current noun.
+    The inputs 'q', 'pn', 'pc' mean quit, return to the previous noun, 
+    return to the previous case, respectively. Other inputs are saved 
+    as answers.
 
     Args:
-        questions: A list of (noun, number, case) tuples storing the 
+        questions: A list of (noun, number, case) tuples storing the
             questions.
 
     Returns:
-        Action.STOP if the user quits, Action.BACK if the user requests 
-        the previous pattern, or Action.FORWARD if the user answers 
-        every question.
+        A tuple containing the action to take and the collected answers 
+        (answers may be incomplete if the user quits or navigates back).
     """
 
     print(f"{questions[0][0].capitalize()}")
+    user_answers: UserAnswers = {key: {} for key in NUMBER_KEYS}
     # Skip the nominative case
     curr_pos = 1
     while curr_pos < len(questions):
-        _, curr_number, curr_case = questions[curr_pos]
-        prompt = f"{curr_number} {curr_case}: "
+        _, number, case = questions[curr_pos]
+        prompt = f"{number} {case}: "
         user_input = input(prompt).strip().lower()
 
         if user_input == 'q':
-            return Action.STOP
+            return Action.STOP, user_answers
         elif user_input == 'pn':
-            return Action.BACK
+            return Action.BACK, user_answers
         elif user_input == 'pc':
-            curr_pos = max(curr_pos-1, 1)
+            curr_pos = max(curr_pos - 1, 1)
         else:
+            user_answers[number][case] = user_input
             curr_pos += 1
-                
-    return Action.FORWARD
+
+    return Action.FORWARD, user_answers
 
 
 def print_instructions() -> None:
@@ -186,17 +193,16 @@ def main():
     patterns = load_patterns()
 
     print_instructions()
-    quiz_running = True
     curr_pos = 0
     while curr_pos < len(patterns):
         curr_question = create_question_triples(patterns[curr_pos])
 
-        action = ask_questions(curr_question)
+        action, answers = ask_questions(curr_question)
 
         if action is Action.FORWARD:
             curr_pos += 1
         elif action is Action.BACK:
-            curr_pos = max(curr_pos-1, 0)
+            curr_pos = max(curr_pos - 1, 0)
         else:
             break
 
